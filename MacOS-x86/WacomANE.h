@@ -23,7 +23,7 @@
 
 #ifndef WacomANE_H_
 #define WacomANE_H_
-#include "/Applications/Adobe/Adobe Flash Builder 4.7/sdks/4.6.0/runtimes/air/mac/Adobe AIR.framework/Headers/FlashRuntimeExtensions.h"
+#include "FlashRuntimeExtensions.h"
 //#include <Adobe AIR/Adobe AIR.h>
 
 EXPORT

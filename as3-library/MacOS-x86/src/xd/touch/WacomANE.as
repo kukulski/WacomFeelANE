@@ -2,11 +2,13 @@ package xd.touch
 {
 
 	//import flash.events.EventDispatcher;
+	import flash.events.Event;
+	import flash.events.EventDispatcher;
 	import flash.events.StatusEvent;
 	import flash.external.ExtensionContext;
 	import flash.text.TextField;
 
-	public class WacomANE  // extends EventDispatcher
+	public class WacomANE  extends EventDispatcher
 	{
 		private var   _ExtensionContext:ExtensionContext;
 
@@ -28,14 +30,19 @@ package xd.touch
 		public var tf:TextField; 
 		private function gotEvent(event:StatusEvent):void
 		{
+			trace(event);
+			
 			if(tf) tf.appendText(event.toString());
+			dispatchEvent(new Event(event.code));
 			trace(event);
 		}
-		public function init():void {
-			
-			
-			trace(_ExtensionContext.toString());
-			trace(_ExtensionContext.call("init"));
+		
+		public function sendEvent(type:String):void {
+			_ExtensionContext.call("sendEvent",type);
+		}
+		
+		public function init():* {
+			return(_ExtensionContext.call("init"));
 		}
 		
 		

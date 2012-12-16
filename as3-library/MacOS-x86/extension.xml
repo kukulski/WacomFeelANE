@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension xmlns="http://ns.adobe.com/air/extension/3.1">
 	<id>xd.touch.WacomANE</id>
-	<name>Wacom Touch Native Extension</name>
-	<copyright>This work is licensed under Mozilla Public License Version 1.1, Copyright 2012</copyright>
 	<versionNumber>1.0.0</versionNumber>
 	<platforms>
 	<platform name="MacOS-x86">

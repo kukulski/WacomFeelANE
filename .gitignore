@@ -1,3 +1,5 @@
 *.framework
 xcuserdata
 build
+.DS_Store
+.settings/
