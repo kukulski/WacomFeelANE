@@ -13,7 +13,9 @@ typedef struct __attribute__((__packed__)) {
 	long type;
 	long tablet;
 	long tool;
-	double x;
+
+    // we could totally get by with floats instead of doubles
+    double x;
 	double y;
 	long z;
 	long buttons;
@@ -42,16 +44,11 @@ FREContext gCtx;
 
 FREObject gMouseBuffer;
 
-//FREObject gTouches;
-//FREObject touches[10];
-//FREObject pen;
-//FREObject mouse;
 
 size_t gLen;
 packedPacket packedBuffer[20];
 int ids[40];
 
-FREObject gPenPacketObject;
 penPacket gPenPacket;
 
 
@@ -168,20 +165,21 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                      
                      
                      if(type == kCGEventTabletProximity) {
+
+                     // wacom tablets only emit the tool ID for proximity events so we only set it then
+                     //  BUG: this assumes at most one wacom tablet -- create a dictionary <tabletID>->currentTool
                         gPenPacket.tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
+                        gPenPacket.tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
                      }
                      
                      
                      gPenPacket.type = type;
                      
                      CGPoint location = CGEventGetLocation(event);
-                   
                      
                      char buf[100];
                      snprintf(buf, sizeof(buf), "event location %f,%f",location.x, location.y);
                      FREDispatchStatusEventAsync(ctx, (const uint8_t *)"aMousefl", (const uint8_t *)buf);
-                     
-                     
                      
                      gPenPacket.x = location.x;
                      gPenPacket.y = location.y;
@@ -193,30 +191,11 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                      gPenPacket.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
                      gPenPacket.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
                      gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
-                     gPenPacket.tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
-                     //packet.tool = 0; // currentTablet->tool;
-                     
+                     //packet.tool = 0; -- no need to set
+                     // 
                      gLen = 1;
                      
-//
-                     
-                     
-                     
-                     
-                     //NSWindow *targetWindowForEvent = [incomingEvent window];
-//                     if (targetWindowForEvent != _window) {
-//                     [self _closeAndSendAction:NO];
-//                     } else if ([incomingEvent type] == NSKeyDown) {
-//                     if ([incomingEvent keyCode] == 53) {
-//                     // Escape
-//                     [self _closeAndSendAction:NO];
-//                     result = nil; // Don't process the event
-//                     } else if ([incomingEvent keyCode] == 36) {
-//                     // Enter
-//                     [self _closeAndSendAction:YES];
-//                     result = nil;
-//                     }
-//                     }
+
                      return result;
                      }];
 
@@ -262,26 +241,29 @@ FREObject FEELE_getPenData(FREContext ctx, void* funcData, uint32_t argc, FREObj
 {
     size_t length = sizeof(penPacket);
  
-    FREGetContextActionScriptData(ctx, &gPenPacketObject);
+    // you're not allowed to keep FREObject references between calls.
+    // you must get them from the context action script data
+    FREObject buffer;
+    FREGetContextActionScriptData(ctx, &buffer);
 
     
-    if(!gPenPacketObject) {
+    if(!buffer) {
         FREObject exception;
-        FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &gPenPacketObject, &exception);
+        FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
     
         FREObject lengthObj;
         FRENewObjectFromUint32(length, &lengthObj);
-        FRESetObjectProperty(gPenPacketObject, (const uint8_t *)"length", lengthObj, &exception);
-        FRESetContextActionScriptData(ctx, gPenPacketObject);
+        FRESetObjectProperty(buffer, (const uint8_t *)"length", lengthObj, &exception);
+        FRESetContextActionScriptData(ctx, buffer);
     }
     
     FREByteArray array;
-    FREAcquireByteArray(gPenPacketObject, &array);
+    FREAcquireByteArray(buffer, &array);
     
     memcpy(array.bytes, &gPenPacket, length);
-    FREReleaseByteArray(gPenPacketObject);
+    FREReleaseByteArray(buffer);
     
-    return gPenPacketObject;
+    return buffer;
 }
 
 void reg(FRENamedFunction *store, int slot, const char *name, FREFunction fn) {
@@ -336,7 +318,6 @@ void contextFinalizer(FREContext ctx)
 
 void WacomANEinitializer(void** extData, FREContextInitializer* ctxInitializer, FREContextFinalizer* ctxFinalizer)
 {
-    fprintf(stderr,"init'd\n");
   *ctxInitializer = &contextInitializer;
   *ctxFinalizer = &contextFinalizer;
  *extData = NULL;
