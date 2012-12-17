@@ -27,26 +27,12 @@ typedef struct __attribute__((__packed__)) {
 } penPacket;
 
 
-typedef struct __attribute__((__packed__)) {
-    int							FingerID;
-    float							X;
-    float							Y;
-    float							Width;
-    float							Height;
-    unsigned short				Sensitivity;
-    float							Orientation;
-    char							Confidence;
-    char                        TouchState;
-} packedPacket;
-
-
-FREContext gCtx;
 
 FREObject gMouseBuffer;
 
-
-size_t gLen;
-packedPacket packedBuffer[20];
+FREContext gCtx;
+int gFingerCount;
+WacomMTFinger gFingerBuffer[20];
 int ids[40];
 
 penPacket gPenPacket;
@@ -92,7 +78,7 @@ void wacomStart() {
 
 void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo)
 {
-    WacomMTRegisterFingerReadCallback(deviceInfo.DeviceID, nil,  WMTProcessingModeNone, MyFingerCallback, nil);
+    WacomMTRegisterFingerReadCallback(deviceInfo.DeviceID, nil,  WMTProcessingModeObserver, MyFingerCallback, nil);
 }
 
 void MyDetachCallback(int deviceId, void *userInfo)
@@ -103,23 +89,11 @@ void MyDetachCallback(int deviceId, void *userInfo)
 
 int MyFingerCallback(WacomMTFingerCollection *packet, void *unused) {
     
-    for(int i=0; i < packet->FingerCount; i++) {
-        WacomMTFinger *from = &packet->Fingers[i];
-        packedPacket *to = &packedBuffer[i];
-        
-        
-        to->FingerID = from->FingerID;
-        to->X = from->X;
-        to->Y = from->Y;
-        to->Width = from->Width;
-        to->Height = from->Height;
-        to->Sensitivity = from->Sensitivity;
-        to->Orientation = from->Orientation;
-        to->Confidence = from->Confidence;
-        to->TouchState = from->TouchState;
-    }
-
-    gLen = packet->FingerCount * sizeof(packedPacket);
+    gFingerCount = packet->FingerCount;
+    memcpy(gFingerBuffer, packet->Fingers, gFingerCount * sizeof(WacomMTFinger));
+    
+    
+    FREDispatchStatusEventAsync(gCtx, (const uint8_t *)"touch", (const uint8_t *)"");
     
     return WMTErrorSuccess;
 }
@@ -211,7 +185,8 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
 	
     
     _eventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:
-                     (NSTabletPointMask | NSTabletProximityMask |NSMouseMovedMask)
+                     (NSMouseMovedMask|NSTabletProximityMask|NSTabletPointMask|
+                      NSLeftMouseDownMask|NSLeftMouseUpMask|NSLeftMouseDraggedMask)
                                                           handler:^(NSEvent *e) {
                      NSEvent *result = e;
                      FREObject asObj;
@@ -223,6 +198,13 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                      CGEventType type = CGEventGetType(event);
                      setIntProperty(pen, "type",type);
                      
+                      // ground out if not a tablet event
+                      if(type != kCGEventTabletPointer && type != kCGEventTabletProximity) {
+                          int64_t subtypeVal = CGEventGetIntegerValueField(event, kCGMouseEventSubtype);
+                          if(subtypeVal != kCGEventMouseSubtypeTabletPoint) 
+                              return result;
+                      }
+                                                              
              
                      int tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
                      
@@ -246,50 +228,52 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                       gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
                       gPenPacket.tablet = tablet;
                      
-                                    char buf[100];
-                     snprintf(buf, sizeof(buf), "event location %f,%f",location.x, location.y);
-                     FREDispatchStatusEventAsync(ctx, (const uint8_t *)"aMousefl", (const uint8_t *)buf);
-                     
-                     FRESetContextActionScriptData(ctx, pen);
-                     return result;
+                     FREDispatchStatusEventAsync(ctx, (const uint8_t *)"pen", (const uint8_t *)"");
+                       return result;
                      }];
 
     [_eventMonitor retain];
+    
+    gCtx = ctx;
+    wacomInit();
+    wacomStart();
     
     
     FREObject retVal;
 	FRENewObjectFromUTF8(3, (const uint8_t *)"foo",&retVal);
 
     return retVal;
-    
-    
-    
-    
-    
-    
-    
+ 
 }
 
 
-FREObject FEELE_getdata(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
+FREObject FEELE_getTouchData(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
-    size_t length = gLen * sizeof(packedPacket);
-    gCtx = ctx;
-    FREObject buffer;
-    FREObject exception;
-    FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
     
-    FREObject lengthObj;
-    FRENewObjectFromUint32(length, &lengthObj);
-    FRESetObjectProperty(buffer, (const uint8_t *)"length", lengthObj, &exception);
-  
-    FREByteArray array;
-    FREAcquireByteArray(buffer, &array);
-  
-    memcpy(array.bytes, packedBuffer, length);
-    FREReleaseByteArray(buffer);
- 
-    return buffer;
+    FREObject countVectorPair = getTouchArray(ctx);
+    FREObject touches = getElement(countVectorPair, 1);
+    
+    setIntElement(countVectorPair, 0, gFingerCount);
+    for(int i = 0; i < gFingerCount; i++) {
+        FREObject touch = getElement(touches,i);
+        FREObject onAirDesktop = getProperty(touch,"onAirDesktop");
+        FREObject size = getProperty(touch,"size");
+
+        
+        WacomMTFinger *finger = &gFingerBuffer[i];
+      
+        setIntProperty(touch, "id", finger->FingerID);
+        setIntProperty(touch, "confidence", finger->Confidence);
+        setIntProperty(touch, "state", finger->TouchState);
+        setIntProperty(touch, "sensitivity",finger->Sensitivity);
+        
+        setNumberProperty(onAirDesktop, "x", finger->X);
+        setNumberProperty(onAirDesktop, "y", finger->Y);
+   
+        setNumberProperty(size, "x", finger->Width);
+        setNumberProperty(size, "y", finger->Height);
+    }
+    return countVectorPair;
 }
 
 FREObject FEELE_getPenData(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
@@ -335,30 +319,9 @@ void contextInitializer(void* extData, const uint8_t* ctxType, FREContext ctx, u
   *functions = func;
 
     int i = 0;
-    reg(func,i++,"getData",FEELE_getdata);
+    reg(func,i++,"getTouchData",FEELE_getTouchData);
     reg(func,i++,"getPenData",FEELE_getPenData);
     reg(func,i++,"init",FEELE_init);
-    
-////    
-////  func[0].name = (const uint8_t*) "touchStart";
-////  func[0].functionData = NULL;
-////  func[0].function = FEELE_start;
-//
-//    func[1].name = (const uint8_t*) "getData";
-//    func[1].functionData = NULL;
-//    func[1].function = FEELE_getdata;
-//    
-//    func[2].name = (const uint8_t*) "touchStop";
-//    func[2].functionData = NULL;
-//    func[2].function = FEELE_stop;
-//    
-//    func[3].name = (const uint8_t*) "sendEvent";
-//    func[3].functionData = NULL;
-//    func[3].function = FEELE_sendEvent;
-//    
-//    func[4].name = (const uint8_t*) "init";
-//    func[4].functionData = NULL;
-//    func[4].function = FEELE_init;
 }
 
 

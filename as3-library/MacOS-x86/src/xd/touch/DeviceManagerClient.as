@@ -1,11 +1,14 @@
 package xd.touch
 {
+	import flash.display.Screen;
 	import flash.display.Sprite;
 	import flash.display.StageAlign;
 	import flash.display.StageDisplayState;
 	import flash.display.StageScaleMode;
 	import flash.events.Event;
 	import flash.geom.Rectangle;
+	
+	import xd.util.ScreenUtils;
 	
 	public class DeviceManagerClient extends Sprite
 	{
@@ -24,15 +27,22 @@ package xd.touch
 			stage.align = StageAlign.TOP_LEFT;
 			DeviceManager.instance.registerWindow(stage.nativeWindow);
 			// positioning the window appropriately for the wacom + resizing
+			
+			var s:Screen = ScreenUtils.find(1920,1200);
+			if(s) {
+				DeviceManager.instance.bounds = s.bounds;
+			}
+			
+			
 			var b:Rectangle = DeviceManager.instance.bounds;
 			if(b) {
 				stage.nativeWindow.bounds = b; 
 				if(DeviceManager.instance.fullscreen)
 					stage.displayState = StageDisplayState.FULL_SCREEN_INTERACTIVE;
-			} else {
-				stage.displayState = StageDisplayState.FULL_SCREEN_INTERACTIVE;
 			}
-			clientInit(e);
+			
+				
+				clientInit(e);
 			stage.nativeWindow.visible = true;
 		}
 		protected function clientInit(e:Event):void {

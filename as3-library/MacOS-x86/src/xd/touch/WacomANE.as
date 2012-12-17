@@ -19,7 +19,7 @@ package xd.touch
 		private var _ba:ByteArray = new ByteArray;
 		private static const touchCount:uint = 20;
 		private var _dispatchMap:Object;
-		public var dispatch:Boolean;
+		public var dispatch:Boolean = true;
 		
 		public function WacomANE()
 		{
@@ -46,13 +46,14 @@ package xd.touch
 			return {
 				pen: new PenInput, 
 				toolMap: [],
-				count: 0,
-				contacts: makeTouches(touchCount)
+				touches: [0, makeTouches(touchCount)]
 			}
 		}
 		
 		
 		public function get tabletBounds():Rectangle {
+			
+			
 			// todo: have the native code dtermine which screen has the tablet
 			return null;
 		}
@@ -65,7 +66,6 @@ package xd.touch
 			return rval;
 		}
 		
-		private function nothing():void {}
 		public var tf:TextField; 
 		private function gotEvent(event:StatusEvent):void
 		{
@@ -83,8 +83,10 @@ package xd.touch
 			var contacts:Vector.<WacomContact> = countPair[1] as Vector.<WacomContact>;
 			var count:uint = countPair[0] as uint;
 			
-			for(var i:int = 0; i < count; i++)
+			for(var i:int = 0; i < count; i++) {
+			//	trace(i, contacts[i].id);
 				contacts[i].dispatch();
+			}
 		}
 
 		

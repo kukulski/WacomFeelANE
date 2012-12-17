@@ -12,6 +12,7 @@ package xd.touch
 	import flash.events.TouchEventIntent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
+	import flash.system.ApplicationDomain;
 
 	public class BaseInput
 	{
@@ -36,7 +37,7 @@ package xd.touch
 		public function dispatch():void {
 			if(!alsoSendsAsMouse) {
 				_mouse = VirtualMouse.getInstance();
-				findStage(onAirDesktop);
+				mapToStage();
 			_mouse.stage = _stage;
 				
 				if(down) 
@@ -112,7 +113,12 @@ package xd.touch
 		private static const _pzz:Point = new Point(0,0);
 		
 		public function mapToStage():void {
-			toWindowInPlace(onAirDesktop, findStage(onAirDesktop), inActiveWindow);
+			var win:NativeWindow = NativeApplication.nativeApplication.activeWindow;
+			if(!win) 
+				win = NativeApplication.nativeApplication.openedWindows[0] as NativeWindow;
+			
+			_stage = win.stage;
+			toWindowInPlace(onAirDesktop, win, inActiveWindow);
 		}
 		
 
@@ -138,37 +144,40 @@ package xd.touch
 				} 
 			
 		}
-		
-		//TODO: split this into findStage / activateStage  & move into the device manager
-		protected function findStage(worldPoint:Point):NativeWindow {
-			
-			/* this chunk of code can probably find a better place to live --
-			
-			the idea here is that a touch through the driver stack should activate the running application.
-			
-			it doesn't pay attention to window order
-			and we don't handle things like close buttons and resizing
-			
-			*/
-			
-			var activeWindow:NativeWindow = NativeApplication.nativeApplication.activeWindow;
-			if(!alsoSendsAsMouse && !activeWindow) {
-				var windows:Vector.<NativeWindow> = DeviceManager.instance.windows;
-				for each (var w:NativeWindow in windows) {
-					var bounds:Rectangle = w.bounds;
-					if(bounds.containsPoint(worldPoint)) {
-						activeWindow = w;
-						NativeApplication.nativeApplication.activate(activeWindow);
-						activeWindow.orderToFront();
-						break;
-					} // if matches
-				}// for each window
-				
-			}// if no active window
-
-			_stage = activeWindow ? activeWindow.stage : null;
-			return activeWindow;
-		}
-		
+//		
+//		//TODO: split this into findStage / activateStage  & move into the device manager
+//		protected function findStage(worldPoint:Point):NativeWindow {
+//			
+//			
+//			return NativeApplication.nativeApplication.openedWindows[0] as NativeWindow;
+//			
+////			/* this chunk of code can probably find a better place to live --
+////			
+////			the idea here is that a touch through the driver stack should activate the running application.
+////			
+////			it doesn't pay attention to window order
+////			and we don't handle things like close buttons and resizing
+////			
+////			*/
+////			
+////			var activeWindow:NativeWindow = NativeApplication.nativeApplication.activeWindow;
+////			if(!alsoSendsAsMouse && !activeWindow) {
+////				var windows:Vector.<NativeWindow> = DeviceManager.instance.windows;
+////				for each (var w:NativeWindow in windows) {
+////					var bounds:Rectangle = w.bounds;
+////					if(bounds.containsPoint(worldPoint)) {
+////						activeWindow = w;
+////						NativeApplication.nativeApplication.activate(activeWindow);
+////						activeWindow.orderToFront();
+////						break;
+////					} // if matches
+////				}// for each window
+////				
+////			}// if no active window
+////
+////			_stage = activeWindow ? activeWindow.stage : null;
+////			return activeWindow;
+//		}
+//		
 	}
 }

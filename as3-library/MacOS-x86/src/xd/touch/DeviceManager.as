@@ -19,7 +19,7 @@ package xd.touch
 		public static function get instance():DeviceManager {
 			if(!_instance) {
 				_instance = new DeviceManager(_key);
-				_instance.drivers = [
+				_instance.drivers = [new WacomANE
 				];
 			}
 			return _instance;				

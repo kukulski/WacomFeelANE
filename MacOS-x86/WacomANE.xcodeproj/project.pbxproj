@@ -29,8 +29,6 @@
 		8DC2EF5A0486A6940098B216 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8DC2EF5B0486A6940098B216 /* WacomANE.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WacomANE.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F7E79907B2D74100F64583 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
-		FC3A690A167D4D020047D88A /* EventTap.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; path = EventTap.c; sourceTree = "<group>"; };
-		FC3A690D167D4D220047D88A /* EventTap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EventTap.h; sourceTree = "<group>"; };
 		FC3A6914167E9E3B0047D88A /* build.command */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = build.command; path = ../build.command; sourceTree = "<group>"; };
 		FCFFD749167BC3B2007C1AF9 /* Adobe AIR.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = "Adobe AIR.framework"; sourceTree = "<group>"; };
 		FCFFD762167BC7E4007C1AF9 /* WacomMultiTouch.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WacomMultiTouch.framework; path = ../../../../../../Library/Frameworks/WacomMultiTouch.framework; sourceTree = "<group>"; };
@@ -97,8 +95,6 @@
 			isa = PBXGroup;
 			children = (
 				768FF6211480200C00A0EF77 /* WacomANE.c */,
-				FC3A690A167D4D020047D88A /* EventTap.c */,
-				FC3A690D167D4D220047D88A /* EventTap.h */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -213,7 +209,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd ..\n/code/git/as3/WacomFeelANE/build.command";
+			shellScript = "cd ..\n/code/git/osx/WacomFeelANE/build.command";
 		};
 /* End PBXShellScriptBuildPhase section */
 

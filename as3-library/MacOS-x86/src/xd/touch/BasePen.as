@@ -29,10 +29,7 @@ package xd.touch
 
 		protected function get eventID():int { return PEN_ID;} 
 		public override function dispatch():void {
-	
-	
-			findStage(onAirDesktop);
-			mapToStage();
+		mapToStage();
 		// no need to call this, since pen events ALWAYS go out as mouse events
 		//	super.dispatch();
 			
