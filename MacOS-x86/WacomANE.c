@@ -41,9 +41,16 @@ typedef struct __attribute__((__packed__)) {
 FREContext gCtx;
 FREObject gBuffer;
 
+FREObject gMouseBuffer;
+
+//FREObject gTouches;
+//FREObject touches[10];
+//FREObject pen;
+//FREObject mouse;
+
 size_t gLen;
 packedPacket packedBuffer[20];
-penPacket packet;
+penPacket gPenPacket;
 int ids[40];
 
 
@@ -146,9 +153,6 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                      NSEvent *result = e;
                      
                      
-                     FREDispatchStatusEventAsync(ctx, (const uint8_t *)"aMousefl", (const uint8_t *)"mouseLevel");
-                     
-                     
                      CGEventRef event = e.CGEvent;
                      CGEventType type = CGEventGetType(event);
                      
@@ -163,27 +167,35 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                      
                      
                      if(type == kCGEventTabletProximity) {
-                        packet.tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
+                        gPenPacket.tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
                      }
                      
-                     packet.type = type;
+                     
+                     gPenPacket.type = type;
                      
                      CGPoint location = CGEventGetLocation(event);
+                   
                      
-                     packet.x = location.x;
-                     packet.y = location.y;
+                     char buf[100];
+                     snprintf(buf, sizeof(buf), "event location %f,%f",location.x, location.y);
+                     FREDispatchStatusEventAsync(ctx, (const uint8_t *)"aMousefl", (const uint8_t *)buf);
                      
-                     packet.z = CGEventGetIntegerValueField(event, kCGTabletEventPointZ);
-                     packet.buttons =  CGEventGetIntegerValueField(event, kCGTabletEventPointButtons);
-                     packet.pressure = CGEventGetDoubleValueField(event, kCGTabletEventPointPressure);
-                     packet.tiltX = CGEventGetDoubleValueField(event, kCGTabletEventTiltX);
-                     packet.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
-                     packet.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
-                     packet.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
-                     packet.tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
+                     
+                     
+                     gPenPacket.x = location.x;
+                     gPenPacket.y = location.y;
+                     
+                     gPenPacket.z = CGEventGetIntegerValueField(event, kCGTabletEventPointZ);
+                     gPenPacket.buttons =  CGEventGetIntegerValueField(event, kCGTabletEventPointButtons);
+                     gPenPacket.pressure = CGEventGetDoubleValueField(event, kCGTabletEventPointPressure);
+                     gPenPacket.tiltX = CGEventGetDoubleValueField(event, kCGTabletEventTiltX);
+                     gPenPacket.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
+                     gPenPacket.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
+                     gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
+                     gPenPacket.tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
                      //packet.tool = 0; // currentTablet->tool;
                      
-                     
+                     gLen = 1;
                      
 //
                      
@@ -244,56 +256,84 @@ FREObject FEELE_stop(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
 
 FREObject FEELE_getdata(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
-    
-    size_t length = 20 * sizeof(WacomMTFingerState);
+    size_t length = gLen * sizeof(packedPacket);
     gCtx = ctx;
     FREObject buffer;
     FREObject exception;
-    FREResult allocResult = FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
+    FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
+    
     FREObject lengthObj;
     FRENewObjectFromUint32(length, &lengthObj);
-
     FRESetObjectProperty(buffer, (const uint8_t *)"length", lengthObj, &exception);
+  
+    FREByteArray array;
+    FREAcquireByteArray(buffer, &array);
+  
+    memcpy(array.bytes, packedBuffer, length);
+    FREReleaseByteArray(buffer);
+ 
+    return buffer;
+}
 
+FREObject FEELE_getPenData(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
+{
+    size_t length = sizeof(penPacket);
+    gCtx = ctx;
+    FREObject buffer;
+    FREObject exception;
+    FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
     
+    FREObject lengthObj;
+    FRENewObjectFromUint32(length, &lengthObj);
+    FRESetObjectProperty(buffer, (const uint8_t *)"length", lengthObj, &exception);
     
     FREByteArray array;
-    FREAcquireByteArray(gBuffer, &array);
+    FREAcquireByteArray(buffer, &array);
     
+    memcpy(array.bytes, &gPenPacket, length);
+    FREReleaseByteArray(buffer);
+    
+    return buffer;
+}
 
-    memcpy(packedBuffer, array.bytes, gLen);
-    FREReleaseByteArray(gBuffer);
-    
-    
-    return gBuffer;
+void reg(FRENamedFunction *store, int slot, const char *name, FREFunction fn) {
+    store[slot].name = (const uint8_t*)name;
+    store[slot].functionData = NULL;
+    store[slot].function = fn;
 }
 
 
 void contextInitializer(void* extData, const uint8_t* ctxType, FREContext ctx, uint32_t* numFunctions, const FRENamedFunction** functions)
 {
-  *numFunctions = 5;
+  *numFunctions = 3;
   FRENamedFunction* func = (FRENamedFunction*) malloc(sizeof(FRENamedFunction) * (*numFunctions));
   *functions = func;
 
-  func[0].name = (const uint8_t*) "touchStart";
-  func[0].functionData = NULL;
-  func[0].function = FEELE_start;
-
-    func[1].name = (const uint8_t*) "touchGetData";
-    func[1].functionData = NULL;
-    func[1].function = FEELE_getdata;
+    int i = 0;
+    reg(func,i++,"getData",FEELE_getdata);
+    reg(func,i++,"getPenData",FEELE_getPenData);
+    reg(func,i++,"init",FEELE_init);
     
-    func[2].name = (const uint8_t*) "touchStop";
-    func[2].functionData = NULL;
-    func[2].function = FEELE_stop;
-    
-    func[3].name = (const uint8_t*) "sendEvent";
-    func[3].functionData = NULL;
-    func[3].function = FEELE_sendEvent;
-    
-    func[4].name = (const uint8_t*) "init";
-    func[4].functionData = NULL;
-    func[4].function = FEELE_init;
+////    
+////  func[0].name = (const uint8_t*) "touchStart";
+////  func[0].functionData = NULL;
+////  func[0].function = FEELE_start;
+//
+//    func[1].name = (const uint8_t*) "getData";
+//    func[1].functionData = NULL;
+//    func[1].function = FEELE_getdata;
+//    
+//    func[2].name = (const uint8_t*) "touchStop";
+//    func[2].functionData = NULL;
+//    func[2].function = FEELE_stop;
+//    
+//    func[3].name = (const uint8_t*) "sendEvent";
+//    func[3].functionData = NULL;
+//    func[3].function = FEELE_sendEvent;
+//    
+//    func[4].name = (const uint8_t*) "init";
+//    func[4].functionData = NULL;
+//    func[4].function = FEELE_init;
 }
 
 

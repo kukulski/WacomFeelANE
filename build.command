@@ -2,6 +2,9 @@
 
 # set for debug
 # set -xv
+ls
+pwd
+ls  MacOS-x86/Build/Products/Release
 
 TARGET=WacomANE
 

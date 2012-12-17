@@ -31,6 +31,7 @@
 		D2F7E79907B2D74100F64583 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 		FC3A690A167D4D020047D88A /* EventTap.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; path = EventTap.c; sourceTree = "<group>"; };
 		FC3A690D167D4D220047D88A /* EventTap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EventTap.h; sourceTree = "<group>"; };
+		FC3A6914167E9E3B0047D88A /* build.command */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = build.command; path = ../build.command; sourceTree = "<group>"; };
 		FCFFD749167BC3B2007C1AF9 /* Adobe AIR.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = "Adobe AIR.framework"; sourceTree = "<group>"; };
 		FCFFD762167BC7E4007C1AF9 /* WacomMultiTouch.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WacomMultiTouch.framework; path = ../../../../../../Library/Frameworks/WacomMultiTouch.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -67,6 +68,7 @@
 				089C1665FE841158C02AAC07 /* Resources */,
 				0867D69AFE84028FC02AAC07 /* External Frameworks and Libraries */,
 				034768DFFF38A50411DB9C8B /* Products */,
+				FC3A6914167E9E3B0047D88A /* build.command */,
 			);
 			name = SerialANE;
 			sourceTree = "<group>";
@@ -151,6 +153,7 @@
 				8DC2EF520486A6940098B216 /* Resources */,
 				8DC2EF540486A6940098B216 /* Sources */,
 				8DC2EF560486A6940098B216 /* Frameworks */,
+				FC3A6915167E9F530047D88A /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -197,6 +200,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FC3A6915167E9F530047D88A /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd ..\n/code/git/as3/WacomFeelANE/build.command";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		8DC2EF540486A6940098B216 /* Sources */ = {

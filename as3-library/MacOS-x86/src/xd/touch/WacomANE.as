@@ -7,16 +7,18 @@ package xd.touch
 	import flash.events.StatusEvent;
 	import flash.external.ExtensionContext;
 	import flash.text.TextField;
+	import flash.utils.ByteArray;
 
 	public class WacomANE  extends EventDispatcher
 	{
 		private var   _ExtensionContext:ExtensionContext;
-
+		private var _ba:ByteArray = new ByteArray;
+		
 		public function WacomANE()
 		{
 			try
 			{
-				_ExtensionContext = ExtensionContext.createExtensionContext("xd.touch.WacomANE", null);
+				_ExtensionContext = ExtensionContext.createExtensionContext("xd.touch.WacomANE",null);
 				_ExtensionContext.addEventListener(StatusEvent.STATUS, gotEvent);				
 				trace("wacom ANE initialized (and this is the updated one)");
 			}
@@ -36,10 +38,15 @@ package xd.touch
 			dispatchEvent(new Event(event.code));
 			trace(event);
 		}
+
+		public function data():ByteArray {
+			return _ExtensionContext.call("getData") as ByteArray;
+		}	
 		
-		public function sendEvent(type:String):void {
-			_ExtensionContext.call("sendEvent",type);
+		public function penData():ByteArray {
+			return _ExtensionContext.call("getPenData") as ByteArray;
 		}
+		
 		
 		public function init():* {
 			return(_ExtensionContext.call("init"));
