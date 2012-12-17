@@ -13,6 +13,7 @@
 		8DC2EF530486A6940098B216 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C1666FE841158C02AAC07 /* InfoPlist.strings */; };
 		8DC2EF570486A6940098B216 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7B1FEA5585E11CA2CBB /* Cocoa.framework */; };
 		FC3A690E167D4E490047D88A /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0867D6A5FE840307C02AAC07 /* AppKit.framework */; };
+		FC783B03167FBF1900416994 /* FREHelpers.c in Sources */ = {isa = PBXBuildFile; fileRef = FC783B02167FBF1900416994 /* FREHelpers.c */; };
 		FCFFD74A167BC3B2007C1AF9 /* Adobe AIR.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCFFD749167BC3B2007C1AF9 /* Adobe AIR.framework */; };
 		FCFFD763167BC7E4007C1AF9 /* WacomMultiTouch.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCFFD762167BC7E4007C1AF9 /* WacomMultiTouch.framework */; };
 /* End PBXBuildFile section */
@@ -30,6 +31,8 @@
 		8DC2EF5B0486A6940098B216 /* WacomANE.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WacomANE.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F7E79907B2D74100F64583 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 		FC3A6914167E9E3B0047D88A /* build.command */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = build.command; path = ../build.command; sourceTree = "<group>"; };
+		FC783B02167FBF1900416994 /* FREHelpers.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = FREHelpers.c; sourceTree = "<group>"; };
+		FC783B04167FBF2400416994 /* FREHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FREHelpers.h; sourceTree = "<group>"; };
 		FCFFD749167BC3B2007C1AF9 /* Adobe AIR.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = "Adobe AIR.framework"; sourceTree = "<group>"; };
 		FCFFD762167BC7E4007C1AF9 /* WacomMultiTouch.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WacomMultiTouch.framework; path = ../../../../../../Library/Frameworks/WacomMultiTouch.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -95,6 +98,8 @@
 			isa = PBXGroup;
 			children = (
 				768FF6211480200C00A0EF77 /* WacomANE.c */,
+				FC783B02167FBF1900416994 /* FREHelpers.c */,
+				FC783B04167FBF2400416994 /* FREHelpers.h */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -219,6 +224,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				768FF6221480200C00A0EF77 /* WacomANE.c in Sources */,
+				FC783B03167FBF1900416994 /* FREHelpers.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

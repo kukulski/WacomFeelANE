@@ -4,6 +4,7 @@
 #include "WacomANE.h"
 #include <stdio.h>
 #include <string.h>
+#include "FREHelpers.h"
 
 #include <WacomMultiTouch/WacomMultiTouch.h>
 
@@ -31,8 +32,19 @@ typedef struct __attribute__((__packed__)) {
 FREObject gMouseBuffer;
 
 FREContext gCtx;
-int gFingerCount;
-WacomMTFinger gFingerBuffer[20];
+
+typedef struct {
+    int count;
+    WacomMTFinger fingers[10];
+} fingerPacket;
+
+const int kRingBufferLength = 100;
+
+int writeIdx = 0;
+int readIdx = 0;
+fingerPacket buffers[kRingBufferLength];
+
+
 int ids[40];
 
 penPacket gPenPacket;
@@ -89,9 +101,11 @@ void MyDetachCallback(int deviceId, void *userInfo)
 
 int MyFingerCallback(WacomMTFingerCollection *packet, void *unused) {
     
-    gFingerCount = packet->FingerCount;
-    memcpy(gFingerBuffer, packet->Fingers, gFingerCount * sizeof(WacomMTFinger));
     
+    buffers[writeIdx].count = packet->FingerCount;
+    memcpy(buffers[writeIdx].fingers, packet->Fingers, packet->FingerCount * sizeof(WacomMTFinger));
+    
+    writeIdx = (writeIdx + 1 ) % kRingBufferLength;
     
     FREDispatchStatusEventAsync(gCtx, (const uint8_t *)"touch", (const uint8_t *)"");
     
@@ -108,48 +122,6 @@ FREObject FEELE_sendEvent(FREContext ctx, void* funcData, uint32_t argc, FREObje
     
     FREDispatchStatusEventAsync(ctx, outVal, NULL);
     return NULL;
-}
-
-void setNumberProperty(FREObject obj, const char *name, double value) {
-    FREObject temp, exception;
-    FRENewObjectFromDouble(value,  &temp);
-    FRESetObjectProperty(obj, (const uint8_t *)name, temp, &exception);
-}
-
-void setIntProperty(FREObject obj, const char *name, int value) {
-    FREObject temp, exception;
-    FRENewObjectFromInt32(value, &temp);
-    FRESetObjectProperty(obj, (const uint8_t *)name, temp, &exception);
-}
-
-void setIntElement(FREObject obj, int index, int value) {
-    FREObject temp;
-    FRENewObjectFromInt32(value, &temp);
-    FRESetArrayElementAt(obj,index, temp);
-}
-
-
-FREObject getExchangeObject(FREContext ctx) {
-    FREObject buffer;
-    FREGetContextActionScriptData(ctx, &buffer);
-    return buffer;
-}
-
-void setProperty(FREObject obj, const char *name, FREObject val) {
-    FREObject ignored;
-    FRESetObjectProperty(obj,(const uint8_t *)name, val, &ignored);
-}
-
-FREObject getProperty(FREObject obj, const char *name) {
-    FREObject rval, exception;
-    FREGetObjectProperty(obj,
-                         (const uint8_t *)name, &rval, &exception);
-    return rval;
-}
-FREObject getElement(FREObject obj, int idx) {
-    FREObject rval;
-    FREGetArrayElementAt(obj,idx, &rval);
-    return rval;
 }
 
 FREObject getPenObject(FREContext ctx) {
@@ -213,8 +185,6 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                         setIntElement(toolMap, tablet, tool);
                      }
                      CGPoint location = CGEventGetLocation(event);
-                     
-                     
 
                      gPenPacket.x = location.x;
                       gPenPacket.y = location.y;
@@ -253,14 +223,19 @@ FREObject FEELE_getTouchData(FREContext ctx, void* funcData, uint32_t argc, FREO
     FREObject countVectorPair = getTouchArray(ctx);
     FREObject touches = getElement(countVectorPair, 1);
     
-    setIntElement(countVectorPair, 0, gFingerCount);
-    for(int i = 0; i < gFingerCount; i++) {
+    
+    fingerPacket *p = &buffers[readIdx];
+    readIdx = (readIdx+1)% kRingBufferLength;
+    int count = p->count;
+    
+    setIntElement(countVectorPair, 0, count);
+    for(int i = 0; i < count; i++) {
         FREObject touch = getElement(touches,i);
         FREObject onAirDesktop = getProperty(touch,"onAirDesktop");
         FREObject size = getProperty(touch,"size");
 
         
-        WacomMTFinger *finger = &gFingerBuffer[i];
+        WacomMTFinger *finger = &p->fingers[i];
       
         setIntProperty(touch, "id", finger->FingerID);
         setIntProperty(touch, "confidence", finger->Confidence);
@@ -305,11 +280,6 @@ FREObject FEELE_getPenData(FREContext ctx, void* funcData, uint32_t argc, FREObj
     return pen;
 }
 
-void reg(FRENamedFunction *store, int slot, const char *name, FREFunction fn) {
-    store[slot].name = (const uint8_t*)name;
-    store[slot].functionData = NULL;
-    store[slot].function = fn;
-}
 
 
 void contextInitializer(void* extData, const uint8_t* ctxType, FREContext ctx, uint32_t* numFunctions, const FRENamedFunction** functions)
@@ -323,9 +293,6 @@ void contextInitializer(void* extData, const uint8_t* ctxType, FREContext ctx, u
     reg(func,i++,"getPenData",FEELE_getPenData);
     reg(func,i++,"init",FEELE_init);
 }
-
-
-    
 
 
 void contextFinalizer(FREContext ctx)
