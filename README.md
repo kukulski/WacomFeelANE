@@ -17,6 +17,6 @@ Air native extension providing wacom stylus support and wacom multitouch support
 * add the ANE to your project via the Native Extensions sub-tab of the project "Build Path" properties
 * check the "Package" checkbox in the Native Extensions sub-tab of the project "Build Packaging" properties
 * (and, yes, you can just reference the ANE from the place that the )
-
-## TBD
-* This will integrate cleanly into my "DeviceSupport" event-injection code once I'm successfully pulling data from the native side.
+* Either
+* * extend your base class from DeviceManagerClient (to have your app automatically fill the screen on the wacom)
+* * or instantiate WacomANE 
