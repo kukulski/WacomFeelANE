@@ -136,8 +136,73 @@ FREObject FEELE_sendEvent(FREContext ctx, void* funcData, uint32_t argc, FREObje
     return NULL;
 }
 
+void setNumberProperty(FREObject obj, const char *name, double value) {
+    FREObject temp, exception;
+    FRENewObjectFromDouble(value,  &temp);
+    FRESetObjectProperty(obj, (const uint8_t *)name, temp, &exception);
+}
+
+void setIntProperty(FREObject obj, const char *name, int value) {
+    FREObject temp, exception;
+    FRENewObjectFromInt32(value, &temp);
+    FRESetObjectProperty(obj, (const uint8_t *)name, temp, &exception);
+}
+
+void setIntElement(FREObject obj, int index, int value) {
+    FREObject temp;
+    FRENewObjectFromInt32(value, &temp);
+    FRESetArrayElementAt(obj,index, temp);
+}
+
+
+FREObject getExchangeObject(FREContext ctx) {
+    FREObject buffer;
+    FREGetContextActionScriptData(ctx, &buffer);
+    return buffer;
+}
+
+void setProperty(FREObject obj, const char *name, FREObject val) {
+    FREObject ignored;
+    FRESetObjectProperty(obj,(const uint8_t *)name, val, &ignored);
+}
+
+FREObject getProperty(FREObject obj, const char *name) {
+    FREObject rval, exception;
+    FREGetObjectProperty(obj,
+                         (const uint8_t *)name, &rval, &exception);
+    return rval;
+}
+FREObject getElement(FREObject obj, int idx) {
+    FREObject rval;
+    FREGetArrayElementAt(obj,idx, &rval);
+    return rval;
+}
+
+FREObject getPenObject(FREContext ctx) {
+    return getProperty(getExchangeObject(ctx), "pen");
+}
+FREObject getToolMap(FREContext ctx) {
+    return getProperty(getExchangeObject(ctx), "toolMap");
+}
+
+FREObject getTouchArray(FREContext ctx){
+    FREObject rval, exception;
+    FREGetObjectProperty(getExchangeObject(ctx),
+                         (const uint8_t *)"touches", &rval, &exception);
+    return rval;
+}
+
+void setFloatEventProperty(FREObject obj, const char *name, CGEventRef event, CGEventField fieldname ) {
+
+    double val = CGEventGetDoubleValueField(event,fieldname);
+    setNumberProperty(obj,name,val);
+}
+
 FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
+    
+    FRESetContextActionScriptData(ctx, argv[0]);
+    
 //    wacomInit();
     
 //	FREObject retVal;
@@ -149,53 +214,43 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
                      (NSTabletPointMask | NSTabletProximityMask |NSMouseMovedMask)
                                                           handler:^(NSEvent *e) {
                      NSEvent *result = e;
-                     
-                     
+                     FREObject asObj;
+                     FREGetContextActionScriptData(ctx, &asObj);
+                     FREObject toolMap = getToolMap(ctx);
+                     FREObject pen = getPenObject(ctx);
+                      
                      CGEventRef event = e.CGEvent;
                      CGEventType type = CGEventGetType(event);
+                     setIntProperty(pen, "type",type);
                      
-//                     if(type == kCGEventMouseMoved) {
-//                     
-//                        CGPoint location = CGEventGetLocation(event);
-//                     
-//                        packet.x = location.x;
-//                        packet.y = location.y;
-//                     
-//                     }
-                     
+             
+                     int tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
                      
                      if(type == kCGEventTabletProximity) {
-
-                     // wacom tablets only emit the tool ID for proximity events so we only set it then
-                     //  BUG: this assumes at most one wacom tablet -- create a dictionary <tabletID>->currentTool
-                        gPenPacket.tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
-                        gPenPacket.tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
+                        int tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
+                        setIntElement(toolMap, tablet, tool);
                      }
-                     
-                     
-                     gPenPacket.type = type;
-                     
                      CGPoint location = CGEventGetLocation(event);
                      
-                     char buf[100];
+                     
+
+                     gPenPacket.x = location.x;
+                      gPenPacket.y = location.y;
+
+                      gPenPacket.z = CGEventGetIntegerValueField(event, kCGTabletEventPointZ);
+                      gPenPacket.buttons =  CGEventGetIntegerValueField(event, kCGTabletEventPointButtons);
+                      gPenPacket.pressure = CGEventGetDoubleValueField(event, kCGTabletEventPointPressure);
+                      gPenPacket.tiltX = CGEventGetDoubleValueField(event, kCGTabletEventTiltX);
+                      gPenPacket.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
+                      gPenPacket.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
+                      gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
+                      gPenPacket.tablet = tablet;
+                     
+                                    char buf[100];
                      snprintf(buf, sizeof(buf), "event location %f,%f",location.x, location.y);
                      FREDispatchStatusEventAsync(ctx, (const uint8_t *)"aMousefl", (const uint8_t *)buf);
                      
-                     gPenPacket.x = location.x;
-                     gPenPacket.y = location.y;
-                     
-                     gPenPacket.z = CGEventGetIntegerValueField(event, kCGTabletEventPointZ);
-                     gPenPacket.buttons =  CGEventGetIntegerValueField(event, kCGTabletEventPointButtons);
-                     gPenPacket.pressure = CGEventGetDoubleValueField(event, kCGTabletEventPointPressure);
-                     gPenPacket.tiltX = CGEventGetDoubleValueField(event, kCGTabletEventTiltX);
-                     gPenPacket.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
-                     gPenPacket.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
-                     gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
-                     //packet.tool = 0; -- no need to set
-                     // 
-                     gLen = 1;
-                     
-
+                     FRESetContextActionScriptData(ctx, pen);
                      return result;
                      }];
 
@@ -239,31 +294,31 @@ FREObject FEELE_getdata(FREContext ctx, void* funcData, uint32_t argc, FREObject
 
 FREObject FEELE_getPenData(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
-    size_t length = sizeof(penPacket);
- 
-    // you're not allowed to keep FREObject references between calls.
-    // you must get them from the context action script data
-    FREObject buffer;
-    FREGetContextActionScriptData(ctx, &buffer);
-
     
-    if(!buffer) {
-        FREObject exception;
-        FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
+    // we may have to stash the pen data into the struct on our event
+    // and copy it out to our rval in this call
     
-        FREObject lengthObj;
-        FRENewObjectFromUint32(length, &lengthObj);
-        FRESetObjectProperty(buffer, (const uint8_t *)"length", lengthObj, &exception);
-        FRESetContextActionScriptData(ctx, buffer);
-    }
+    FREObject pen = getPenObject(ctx);
     
-    FREByteArray array;
-    FREAcquireByteArray(buffer, &array);
     
-    memcpy(array.bytes, &gPenPacket, length);
-    FREReleaseByteArray(buffer);
+    FREObject onAirDesktop = getProperty(pen,"onAirDesktop");
+    FREObject tilt = getProperty(pen,"tilt");
+    FREObject toolMap = getToolMap(ctx);
     
-    return buffer;
+    
+    setNumberProperty(onAirDesktop, "x", gPenPacket.x);
+    setNumberProperty(onAirDesktop, "y", gPenPacket.y);
+    setIntProperty(pen,"z", gPenPacket.z);
+    setIntProperty(pen,"buttons",gPenPacket.buttons);
+    setNumberProperty(pen,"pressure", gPenPacket.pressure);
+    setNumberProperty(tilt,"x", gPenPacket.tiltX);
+    setNumberProperty(tilt,"y", gPenPacket.tiltY);
+    setNumberProperty(pen,"rotation", gPenPacket.rotation);
+    setNumberProperty(pen,"tangentialPressure", gPenPacket.tangentialPressure);
+    setIntProperty(pen,"tablet", gPenPacket.tablet);
+    setProperty(pen, "tool", getElement(toolMap, gPenPacket.tablet));
+    
+    return pen;
 }
 
 void reg(FRENamedFunction *store, int slot, const char *name, FREFunction fn) {
