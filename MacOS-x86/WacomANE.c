@@ -39,7 +39,6 @@ typedef struct __attribute__((__packed__)) {
 
 
 FREContext gCtx;
-FREObject gBuffer;
 
 FREObject gMouseBuffer;
 
@@ -50,8 +49,10 @@ FREObject gMouseBuffer;
 
 size_t gLen;
 packedPacket packedBuffer[20];
-penPacket gPenPacket;
 int ids[40];
+
+FREObject gPenPacketObject;
+penPacket gPenPacket;
 
 
 void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo);
@@ -236,24 +237,6 @@ FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject ar
 }
 
 
-
-
-FREObject FEELE_start(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
-{
-    wacomStart();
-	FREObject retVal;
-	FRENewObjectFromBool(1,&retVal);
-	return retVal;
-}
-
-FREObject FEELE_stop(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
-{
-    wacomStop();
-	FREObject retVal;
-	FRENewObjectFromBool(1,&retVal);
-	return retVal;
-}
-
 FREObject FEELE_getdata(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
     size_t length = gLen * sizeof(packedPacket);
@@ -278,22 +261,27 @@ FREObject FEELE_getdata(FREContext ctx, void* funcData, uint32_t argc, FREObject
 FREObject FEELE_getPenData(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
     size_t length = sizeof(penPacket);
-    gCtx = ctx;
-    FREObject buffer;
-    FREObject exception;
-    FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &buffer, &exception);
+ 
+    FREGetContextActionScriptData(ctx, &gPenPacketObject);
+
     
-    FREObject lengthObj;
-    FRENewObjectFromUint32(length, &lengthObj);
-    FRESetObjectProperty(buffer, (const uint8_t *)"length", lengthObj, &exception);
+    if(!gPenPacketObject) {
+        FREObject exception;
+        FRENewObject((const uint8_t *)"flash.utils.ByteArray", 0, nil, &gPenPacketObject, &exception);
+    
+        FREObject lengthObj;
+        FRENewObjectFromUint32(length, &lengthObj);
+        FRESetObjectProperty(gPenPacketObject, (const uint8_t *)"length", lengthObj, &exception);
+        FRESetContextActionScriptData(ctx, gPenPacketObject);
+    }
     
     FREByteArray array;
-    FREAcquireByteArray(buffer, &array);
+    FREAcquireByteArray(gPenPacketObject, &array);
     
     memcpy(array.bytes, &gPenPacket, length);
-    FREReleaseByteArray(buffer);
+    FREReleaseByteArray(gPenPacketObject);
     
-    return buffer;
+    return gPenPacketObject;
 }
 
 void reg(FRENamedFunction *store, int slot, const char *name, FREFunction fn) {
