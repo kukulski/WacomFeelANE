@@ -214,7 +214,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd ..\n/code/git/osx/WacomFeelANE/build.command";
+			shellScript = "cd ..\n./build.command";
 		};
 /* End PBXShellScriptBuildPhase section */
 

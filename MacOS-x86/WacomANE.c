@@ -10,24 +10,6 @@
 
 #define nil NULL
 
-typedef struct __attribute__((__packed__)) {
-	long type;
-	long tablet;
-	long tool;
-
-    // we could totally get by with floats instead of doubles
-    double x;
-	double y;
-	long z;
-	long buttons;
-	double pressure;
-	double tiltX;
-	double tiltY;
-	double rotation;
-	double tangentialPressure;
-} penPacket;
-
-
 
 FREObject gMouseBuffer;
 
@@ -44,75 +26,29 @@ int writeIdx = 0;
 int readIdx = 0;
 fingerPacket buffers[kRingBufferLength];
 
+id _eventMonitor;
 
 int ids[40];
 
+typedef struct __attribute__((__packed__)) {
+	long type;
+	long tablet;
+	long tool;
+    
+    double x;
+	double y;
+	long z;
+	long buttons;
+	double pressure;
+	double tiltX;
+	double tiltY;
+	double rotation;
+	double tangentialPressure;
+} penPacket;
 penPacket gPenPacket;
 
 
-void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo);
-void MyDetachCallback(int deviceID, void *userInfo);
-int MyFingerCallback(WacomMTFingerCollection *packet, void *unused);
 
-void wacomInit() {
-    WacomMTError err = WacomMTInitialize(WACOM_MULTI_TOUCH_API_VERSION);
-    if(err !=  WMTErrorSuccess ) return;
- }
-
-void wacomStop() {
- 
-    int count = WacomMTGetAttachedDeviceIDs(ids,sizeof(ids));
-    for(int i = 0; i < count; i++) {
-        MyDetachCallback(ids[i],nil);
-    }
-}
-
-
-void wacomFinalize() {
-    WacomMTQuit();
-}
-
-void wacomStart() {
-  
-    WacomMTRegisterAttachCallback(MyAttachCallback, nil);
-    WacomMTRegisterDetachCallback(MyDetachCallback, nil);
-
-    
-    int ids[100];
-    int count = WacomMTGetAttachedDeviceIDs(ids,sizeof(ids));
-    for(int i = 0; i < count; i++) {
-        WacomMTCapability buf;
-        WacomMTGetDeviceCapabilities(ids[i], &buf);
-        MyAttachCallback(buf,nil);
-    }
-}
-
-
-void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo)
-{
-    WacomMTRegisterFingerReadCallback(deviceInfo.DeviceID, nil,  WMTProcessingModeObserver, MyFingerCallback, nil);
-}
-
-void MyDetachCallback(int deviceId, void *userInfo)
-{
-    WacomMTRegisterFingerReadCallback(deviceId, nil,  WMTProcessingModeNone, nil, nil);
-}
-
-
-int MyFingerCallback(WacomMTFingerCollection *packet, void *unused) {
-    
-    
-    buffers[writeIdx].count = packet->FingerCount;
-    memcpy(buffers[writeIdx].fingers, packet->Fingers, packet->FingerCount * sizeof(WacomMTFinger));
-    
-    writeIdx = (writeIdx + 1 ) % kRingBufferLength;
-    
-    FREDispatchStatusEventAsync(gCtx, (const uint8_t *)"touch", (const uint8_t *)"");
-    
-    return WMTErrorSuccess;
-}
-
-id _eventMonitor;
 
 FREObject FEELE_sendEvent(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
@@ -138,73 +74,26 @@ FREObject getTouchArray(FREContext ctx){
     return rval;
 }
 
-void setFloatEventProperty(FREObject obj, const char *name, CGEventRef event, CGEventField fieldname ) {
 
-    double val = CGEventGetDoubleValueField(event,fieldname);
-    setNumberProperty(obj,name,val);
-}
+
+void makeEventMonitor();
+void handleTappedEvent(NSEvent *e);
+void wacomInit();
+void wacomStart();
+void wacomStop();
+void wacomFinalize();
+
+
+
+
 
 FREObject FEELE_init(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 {
     
     FRESetContextActionScriptData(ctx, argv[0]);
-    
-//    wacomInit();
-    
-//	FREObject retVal;
-//	FRENewObjectFromBool(1,&retVal);
-
-	
-    
-    _eventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:
-                     (NSMouseMovedMask|NSTabletProximityMask|NSTabletPointMask|
-                      NSLeftMouseDownMask|NSLeftMouseUpMask|NSLeftMouseDraggedMask)
-                                                          handler:^(NSEvent *e) {
-                     NSEvent *result = e;
-                     FREObject asObj;
-                     FREGetContextActionScriptData(ctx, &asObj);
-                     FREObject toolMap = getToolMap(ctx);
-                     FREObject pen = getPenObject(ctx);
-                      
-                     CGEventRef event = e.CGEvent;
-                     CGEventType type = CGEventGetType(event);
-                     setIntProperty(pen, "type",type);
-                     
-                      // ground out if not a tablet event
-                      if(type != kCGEventTabletPointer && type != kCGEventTabletProximity) {
-                          int64_t subtypeVal = CGEventGetIntegerValueField(event, kCGMouseEventSubtype);
-                          if(subtypeVal != kCGEventMouseSubtypeTabletPoint) 
-                              return result;
-                      }
-                                                              
-             
-                     int tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
-                     
-                     if(type == kCGEventTabletProximity) {
-                        int tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
-                        setIntElement(toolMap, tablet, tool);
-                     }
-                     CGPoint location = CGEventGetLocation(event);
-
-                     gPenPacket.x = location.x;
-                      gPenPacket.y = location.y;
-
-                      gPenPacket.z = CGEventGetIntegerValueField(event, kCGTabletEventPointZ);
-                      gPenPacket.buttons =  CGEventGetIntegerValueField(event, kCGTabletEventPointButtons);
-                      gPenPacket.pressure = CGEventGetDoubleValueField(event, kCGTabletEventPointPressure);
-                      gPenPacket.tiltX = CGEventGetDoubleValueField(event, kCGTabletEventTiltX);
-                      gPenPacket.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
-                      gPenPacket.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
-                      gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
-                      gPenPacket.tablet = tablet;
-                     
-                     FREDispatchStatusEventAsync(ctx, (const uint8_t *)"pen", (const uint8_t *)"");
-                       return result;
-                     }];
-
-    [_eventMonitor retain];
-    
     gCtx = ctx;
+    
+    makeEventMonitor();
     wacomInit();
     wacomStart();
     
@@ -320,4 +209,126 @@ void WacomANEfinalizer(void* extData)
 	
 	return;
 }
+
+//----------- event tap support
+
+
+void makeEventMonitor() {
+    
+    _eventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:
+                     (NSMouseMovedMask|NSTabletProximityMask|NSTabletPointMask|
+                      NSLeftMouseDownMask|NSLeftMouseUpMask|NSLeftMouseDraggedMask)
+                                                          handler:^(NSEvent *e) { handleTappedEvent(e);
+                                                              return e;
+                                                          }];
+    [_eventMonitor retain];
+}
+
+
+void handleTappedEvent(NSEvent *e) {
+    FREObject asObj;
+    FREGetContextActionScriptData(gCtx, &asObj);
+    FREObject toolMap = getToolMap(gCtx);
+    FREObject pen = getPenObject(gCtx);
+    
+    CGEventRef event = e.CGEvent;
+    CGEventType type = CGEventGetType(event);
+    setIntProperty(pen, "type",type);
+    
+    // ground out if not a tablet event
+    if(type != kCGEventTabletPointer && type != kCGEventTabletProximity) {
+        int64_t subtypeVal = CGEventGetIntegerValueField(event, kCGMouseEventSubtype);
+        if(subtypeVal != kCGEventMouseSubtypeTabletPoint)
+            return;
+    }
+    
+    
+    int tablet = CGEventGetIntegerValueField(event, kCGTabletProximityEventSystemTabletID);
+    
+    if(type == kCGEventTabletProximity) {
+        int tool = CGEventGetIntegerValueField(event, kCGTabletProximityEventPointerType);
+        setIntElement(toolMap, tablet, tool);
+    }
+    CGPoint location = CGEventGetLocation(event);
+    
+    gPenPacket.x = location.x;
+    gPenPacket.y = location.y;
+    
+    gPenPacket.z = CGEventGetIntegerValueField(event, kCGTabletEventPointZ);
+    gPenPacket.buttons =  CGEventGetIntegerValueField(event, kCGTabletEventPointButtons);
+    gPenPacket.pressure = CGEventGetDoubleValueField(event, kCGTabletEventPointPressure);
+    gPenPacket.tiltX = CGEventGetDoubleValueField(event, kCGTabletEventTiltX);
+    gPenPacket.tiltY = CGEventGetDoubleValueField(event, kCGTabletEventTiltY);
+    gPenPacket.rotation = CGEventGetDoubleValueField(event, kCGTabletEventRotation);
+    gPenPacket.tangentialPressure = CGEventGetDoubleValueField(event, kCGTabletEventTangentialPressure);
+    gPenPacket.tablet = tablet;
+    
+    FREDispatchStatusEventAsync(gCtx, (const uint8_t *)"pen", (const uint8_t *)"");
+}
+
+//------------------  touch API support
+
+void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo);
+void MyDetachCallback(int deviceID, void *userInfo);
+int MyFingerCallback(WacomMTFingerCollection *packet, void *unused);
+
+void wacomInit() {
+    WacomMTError err = WacomMTInitialize(WACOM_MULTI_TOUCH_API_VERSION);
+    if(err !=  WMTErrorSuccess ) return;
+}
+
+void wacomStop() {
+    
+    int count = WacomMTGetAttachedDeviceIDs(ids,sizeof(ids));
+    for(int i = 0; i < count; i++) {
+        MyDetachCallback(ids[i],nil);
+    }
+}
+
+
+void wacomFinalize() {
+    WacomMTQuit();
+}
+
+void wacomStart() {
+    
+    WacomMTRegisterAttachCallback(MyAttachCallback, nil);
+    WacomMTRegisterDetachCallback(MyDetachCallback, nil);
+    
+    
+    int ids[100];
+    int count = WacomMTGetAttachedDeviceIDs(ids,sizeof(ids));
+    for(int i = 0; i < count; i++) {
+        WacomMTCapability buf;
+        WacomMTGetDeviceCapabilities(ids[i], &buf);
+        MyAttachCallback(buf,nil);
+    }
+}
+
+
+void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo)
+{
+    WacomMTRegisterFingerReadCallback(deviceInfo.DeviceID, nil,  WMTProcessingModeObserver, MyFingerCallback, nil);
+}
+
+void MyDetachCallback(int deviceId, void *userInfo)
+{
+    WacomMTRegisterFingerReadCallback(deviceId, nil,  WMTProcessingModeNone, nil, nil);
+}
+
+
+int MyFingerCallback(WacomMTFingerCollection *packet, void *unused) {
+    
+    
+    buffers[writeIdx].count = packet->FingerCount;
+    memcpy(buffers[writeIdx].fingers, packet->Fingers, packet->FingerCount * sizeof(WacomMTFinger));
+    
+    writeIdx = (writeIdx + 1 ) % kRingBufferLength;
+    
+    FREDispatchStatusEventAsync(gCtx, (const uint8_t *)"touch", (const uint8_t *)"");
+    
+    return WMTErrorSuccess;
+}
+
+
 

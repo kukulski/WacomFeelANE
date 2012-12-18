@@ -1,25 +1,28 @@
 #!/bin/bash
 
-# set for debug
-# set -xv
-ls
-pwd
-ls  MacOS-x86/Build/Products/Release
-
 TARGET=WacomANE
 
-rm -f $TARGET
+rm -f $TARGET.ane
 
 FLEX_SDK=/Applications/Adobe\ Flash\ Builder\ 4.7/sdks/4.6.0
 ADT=$FLEX_SDK/bin/adt
+RELEASE_DIR=MacOS-x86/Build/Products/Release
+DEBUG_DIR=MacOS-x86/Build/Products/Debug
+RELEASE_FW=$RELEASE_DIR/$TARGET.framework
+DEBUG_FW=$DEBUG_DIR/$TARGET.framework
+if [ $DEBUG_FW -nt $RELEASE_FW ]
+then
+    FRAMEWORK_DIR=$DEBUG_DIR
+else
+    FRAMEWORK_DIR=$RELEASE_DIR
+fi
 
-echo $FLEX_SDK
-echo $ADT
+echo $FRAMEWORK_DIR
 
 rm -rf build
 mkdir -p build/mac
 
-cp -r MacOS-x86/Build/Products/Release/$TARGET.framework build/mac
+cp -r $FRAMEWORK_DIR/$TARGET.framework build/mac
 cp as3-library/MacOS-x86/extension.xml build
 cp as3-library/MacOS-x86/bin/$TARGET.swc build
 unzip -o -q build/$TARGET.swc library.swf
