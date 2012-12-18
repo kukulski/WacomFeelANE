@@ -4,7 +4,9 @@ TARGET=WacomANE
 
 rm -f $TARGET.ane
 
-FLEX_SDK=/Applications/Adobe\ Flash\ Builder\ 4.7/sdks/4.6.0
+
+FLEX_SDK=/Applications/Adobe\ Flash\ Builder\ 4.7/eclipse/plugins/com.adobe.flash.compiler_4.7.0.349722/AIRSDK
+#FLEX_SDK=/Applications/Adobe\ Flash\ Builder\ 4.7/sdks/4.6.0
 ADT=$FLEX_SDK/bin/adt
 RELEASE_DIR=MacOS-x86/Build/Products/Release
 DEBUG_DIR=MacOS-x86/Build/Products/Debug
