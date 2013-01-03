@@ -1,9 +1,11 @@
 package xd.touch
 {
 	import flash.display.NativeWindow;
+	import flash.events.Event;
+	import flash.events.EventDispatcher;
 	import flash.geom.Rectangle;
 
-	public class DeviceManager
+	public class DeviceManager extends EventDispatcher
 	{
 		private static const _key:Object = {};
 		private static var _instance:DeviceManager;
@@ -16,14 +18,22 @@ package xd.touch
 		public var overlay:ITouchOverlay;
 		
 		private var _windows:Vector.<NativeWindow> = new Vector.<NativeWindow>;
+		
+		private var _wacom:WacomANE;
 		public static function get instance():DeviceManager {
 			if(!_instance) {
 				_instance = new DeviceManager(_key);
-				_instance.drivers = [new WacomANE
-				];
+				_instance._wacom= new WacomANE;
+				_instance._wacom.addEventListener("Bounds", _instance.boundsFromWacom);
 			}
 			return _instance;				
 		}
+		
+		private function boundsFromWacom(e:Event):void {
+			bounds = _wacom.tabletBounds;
+			dispatchEvent(e);
+		}
+		
 		public function DeviceManager(key:Object)
 		{
 			if(key != _key) throw new Error("singleton. pls use DeviceManager.instance");

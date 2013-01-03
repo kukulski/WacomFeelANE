@@ -20,6 +20,7 @@ package xd.touch
 		private static const touchCount:uint = 20;
 		private var _dispatchMap:Object;
 		public var dispatch:Boolean = true;
+		private var bounds:Rectangle;
 		
 		public function WacomANE()
 		{
@@ -36,7 +37,7 @@ package xd.touch
 				trace(e);
 			}
 		
-			_dispatchMap = { pen:onPen, touch:onTouch};
+			_dispatchMap = { pen:onPen, touch:onTouch, device:onDevice};
 		
 		}
 
@@ -53,9 +54,7 @@ package xd.touch
 		
 		public function get tabletBounds():Rectangle {
 			
-			
-			// todo: have the native code dtermine which screen has the tablet
-			return null;
+			return bounds;
 		}
 		
 		private function makeTouches(count:uint):Vector.<WacomContact> {
@@ -70,15 +69,15 @@ package xd.touch
 		private function gotEvent(event:StatusEvent):void
 		{
 			var code:Function = _dispatchMap[event.code];
-			if(code && dispatch) code();
+			if(code && dispatch) code(event);
 		}
 		
-		private function onPen():void {
+		private function onPen(e:*):void {
 			var pen:PenInput = _ExtensionContext.call("getPenData") as PenInput;
 			pen.dispatch();
 		}
 
-		private function onTouch():void {
+		private function onTouch(e:*):void {
 			var countPair:Array = _ExtensionContext.call("getTouchData") as Array;
 			var contacts:Vector.<WacomContact> = countPair[1] as Vector.<WacomContact>;
 			var count:uint = countPair[0] as uint;
@@ -88,7 +87,16 @@ package xd.touch
 				contacts[i].dispatch();
 			}
 		}
+		private function onDevice(e:StatusEvent):void {
+			
+			var boundsString:String = e.level;
+			var args:Array = boundsString.split(',');
+			bounds = new Rectangle(args[0], args[1], args[2],args[3]);
 
+			dispatchEvent(new Event("Bounds"));
+		}
+		
+		
 		
 		public function get penData():PenInput {
 			

@@ -308,6 +308,10 @@ void wacomStart() {
 
 void MyAttachCallback(WacomMTCapability deviceInfo, void *userInfo)
 {
+    char strbuf[128];
+    snprintf(strbuf,sizeof(strbuf),"%lf,%lf,%lf,%lf",deviceInfo.LogicalOriginX,deviceInfo.LogicalOriginY,deviceInfo.LogicalWidth, deviceInfo.LogicalHeight);
+    FREDispatchStatusEventAsync(gCtx, (const uint8_t *)"device", (const uint8_t *)strbuf);
+    
     WacomMTRegisterFingerReadCallback(deviceInfo.DeviceID, nil,  WMTProcessingModeObserver, MyFingerCallback, nil);
 }
 
