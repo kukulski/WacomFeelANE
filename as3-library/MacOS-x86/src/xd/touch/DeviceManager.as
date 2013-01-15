@@ -20,13 +20,20 @@ package xd.touch
 		private var _windows:Vector.<NativeWindow> = new Vector.<NativeWindow>;
 		
 		private var _wacom:WacomANE;
-		public static function get instance():DeviceManager {
+		
+		
+		public static function getInstance():DeviceManager {
 			if(!_instance) {
 				_instance = new DeviceManager(_key);
 				_instance._wacom= new WacomANE;
 				_instance._wacom.addEventListener("Bounds", _instance.boundsFromWacom);
 			}
 			return _instance;				
+			
+		}
+		
+		public static function get instance():DeviceManager {
+			return getInstance();	
 		}
 		
 		private function boundsFromWacom(e:Event):void {
